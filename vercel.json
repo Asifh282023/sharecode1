@@ -22,10 +22,11 @@
       }
       ,
       {
-        "src": "/",
+        "src": "/codes",
         "dest": "build/index.html"
       }
-      ,{
+      ,
+      {
         "src": "/(.+)",
         "dest": "build/$1"
       }
