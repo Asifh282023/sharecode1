@@ -25,6 +25,13 @@
         "src": "/codes",
         "dest": "build/index.html"
       }
+      ,{
+        "src": "/sharecode",
+        "dest": "build/index.html"
+      } ,{
+        "src": "/cgv",
+        "dest": "build/index.html"
+      }
       ,
       {
         "src": "/(.+)",
