@@ -17,6 +17,11 @@
       }
       ,
       {
+        "src": "/sharecode",
+        "dest": "build/index.html"
+      }
+      ,
+      {
         "src": "/",
         "dest": "build/index.html"
       }
