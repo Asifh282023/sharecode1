@@ -46,7 +46,7 @@ def ID3(data,originaldata,features,target_attribute_name="class",parent_node_cla
 tree = ID3(dataset,dataset,dataset.columns[:-1])
 print(' \nDisplay Tree\n',tree)
 
-##id3.csv file##
+##id1.csv file##
 
 outlook temperature humidity wind class
 Sunny Hot High Weak No
