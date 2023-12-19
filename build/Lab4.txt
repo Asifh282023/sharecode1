@@ -1,75 +1,47 @@
-//4. Draw a color cube and allow the user to move the camera suitably to experiment with perspective viewing. 
+import pandas as pd
+import numpy as np
+dataset=pd.read_csv('id1.csv',names=['outlook','temperature','humidity','wind','class',])
 
-#include <windows.h>
-#include <GL/glut.h>
-GLfloat v[8][3]={{0,0,0},{0,0.5,0},{0.5,0.5,0},{0.5,0,0},{0,0,0.5},{0,0.5,0.5},{0.5,0.5,0.5},{0.5,0,0.5}};
-GLfloat camx=0,camy=0,camz=4;
-void drawface(int a,int b,int c,int d)
-{
-    glBegin(GL_POLYGON);
-       glVertex3fv(v[a]);
-       glVertex3fv(v[b]);
-       glVertex3fv(v[c]);
-       glVertex3fv(v[d]);
-    glEnd();
-}
-void draw()
-{
-    glColor3f(0,0,0);
-    drawface(7,6,5,4);
-    glColor3f(0,0,1);
-    drawface(6,2,1,5);
-    glColor3f(0,1,0);
-    drawface(0,3,2,1);
-    glColor3f(0,1,1);
-    drawface(4,7,3,0);
-    glColor3f(1,0,0);
-    drawface(7,3,2,6);
-    glColor3f(1,0,1);
-    drawface(4,0,1,5);
-}
-void display()
-{
-    glClearColor(1,1,1,1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
-    gluLookAt(camx,camy,camz,.5,.5,.5,0,1,0);
-    draw();
-    glutSwapBuffers();
-}
-void key(unsigned char ch,int x,int y)
-{
-    switch(ch)
-    {
-        case 'x': camx-=0.5;
-                  break;
-        case 'X': camx+=0.5;
-                  break;
-        case 'y': camy-=0.5;
-                  break;
-        case 'Y': camy+=0.5;
-                  break;
-        case 'z': camz-=0.5;
-                  break;
-        case 'Z': camz+=0.5;
-                  break;
-    }
-    glutPostRedisplay();
-}
-int main(int argc, char *argv[])
-{
-    glutInit(&argc, argv);
-    glutInitWindowSize(640,480);
-    glutInitWindowPosition(0,0);
-    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-    glutCreateWindow("Cube");
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glFrustum(-1,1,-1,1,2,20);
-    glMatrixMode(GL_MODELVIEW);
-    glutDisplayFunc(display);
-    glutKeyboardFunc(key);
-    glEnable(GL_DEPTH_TEST);
-    glutMainLoop();
-    return 0;
-}
+def entropy(target_col):
+    elements,counts = np.unique(target_col,return_counts = True)
+    entropy = np.sum([(-counts[i]/np.sum(counts))*np.log2(counts[i]/np.sum(counts))
+    for i in range(len(elements))])
+    return entropy
+
+def InfoGain(data,split_attribute_name,target_name="class"):
+    total_entropy = entropy(data[target_name])
+    vals,counts= np.unique(data[split_attribute_name],return_counts=True)
+    Weighted_Entropy=np.sum(
+        [(counts[i]/np.sum(counts))*
+         entropy(data.where(data[split_attribute_name]==vals[i]).dropna()[target_name])
+         for i in range(len(vals))])
+    Information_Gain = total_entropy - Weighted_Entropy
+    return Information_Gain
+
+def ID3(data,originaldata,features,target_attribute_name="class",parent_node_class =None):
+    if len(np.unique(data[target_attribute_name])) <= 1:
+        return np.unique(data[target_attribute_name])[0]
+    elif len(data)==0:
+        return np.unique(originaldata[target_attribute_name])[np.argmax(np.unique(originaldata[target_attribute_name],
+                                                                                  return_counts=True)[1])]
+    elif len(features) ==0:
+        return parent_node_class
+    else:
+        parent_node_class=np.unique(data[target_attribute_name])[np.argmax(np.unique(data[target_attribute_name],
+                                                                                     return_counts=True)[1])]
+
+    #Return the information gain values for the features in the dataset
+    item_values = [InfoGain(data,feature,target_attribute_name) for feature in features] 
+    best_feature_index = np.argmax(item_values)
+    best_feature = features[best_feature_index]
+    tree = {best_feature:{}}
+    features = [i for i in features if i != best_feature]
+    for value in np.unique(data[best_feature]):
+        value = value
+        sub_data = data.where(data[best_feature] == value).dropna()
+        subtree = ID3(sub_data,dataset,features,target_attribute_name,parent_node_class)
+        tree[best_feature][value] = subtree
+    return(tree)
+
+tree = ID3(dataset,dataset,dataset.columns[:-1])
+print(' \nDisplay Tree\n',tree)
