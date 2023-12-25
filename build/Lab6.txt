@@ -1,90 +1,111 @@
-/*6. To draw a simple shaded scene consisting of a tea pot on a table. Define suitably the position and properties 
-     of the light source along with the properties of the surfaces of the solid object used in the scene. */
-
-#include <windows.h>
-#include <GL/glut.h>
-GLfloat d=0;
-void spin()
-{
-    d=d+0.01;
-    if(d>360)
-        d=0;
-    glutPostRedisplay();
-}
-void display()
-{
-    GLfloat L[]={1,1,1};
-    GLfloat P[]={0,1,-1,0};
-    GLfloat D1[]={1,0,0};
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glLoadIdentity();
-    gluLookAt(0,1,3,0,0,0,0,1,0);
-    glLightfv(GL_LIGHT0,GL_AMBIENT,L);
-    glLightfv(GL_LIGHT0,GL_POSITION,P);
-
-    glRotatef(d,0,1,0);
-
-    glPushMatrix();
-     glScalef(1,0.05,1);
-     glutSolidCube(1);
-    glPopMatrix();
-
-    glPushMatrix();
-     glTranslatef(-0.45,-0.5,-0.45);
-     glScalef(0.05,1,0.05);
-     glutSolidCube(1);
-    glPopMatrix();
-
-    glPushMatrix();
-     glTranslatef(-0.45,-0.5,0.45);
-     glScalef(0.05,1,0.05);
-     glutSolidCube(1);
-    glPopMatrix();
-
-    glPushMatrix();
-     glTranslatef(0.45,-0.5,-0.45);
-     glScalef(0.05,1,0.05);
-     glutSolidCube(1);
-    glPopMatrix();
-
-    glPushMatrix();
-     glTranslatef(0.45,-0.5,0.45);
-     glScalef(0.05,1,0.05);
-     glutSolidCube(1);
-    glPopMatrix();
-
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
-    glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,D1);
-    glPushMatrix();
-     glTranslatef(0,0.2,0);
-     glutSolidTeapot(0.22);
-    glPopMatrix();
-    glPopAttrib();
-
-    glutSwapBuffers();
-}
-
-int main(int argc, char *argv[])
-{
-    glutInit(&argc, argv);
-    glutInitWindowSize(640,640);
-    glutInitWindowPosition(10,10);
-    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-    glutCreateWindow("Teapot");
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glFrustum(-1,1,-1,1,2,10);
-    glMatrixMode(GL_MODELVIEW);
-
-    glutDisplayFunc(display);
-    glutIdleFunc(spin);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_LIGHTING);
-
-    glEnable(GL_LIGHT0);
-
-    glutMainLoop();
-    return 0;
-}
+import csv
+import random
+import math
+ 
+def loadcsv(filename):
+	lines = csv.reader(open(filename, "r"));
+	dataset = list(lines)
+	for i in range(len(dataset)):
+       #converting strings into numbers for processing
+		dataset[i] = [float(x) for x in dataset[i]]
+        
+	return dataset
+ 
+def splitdataset(dataset, splitratio):
+    #67% training size
+	trainsize = int(len(dataset) * splitratio);
+	trainset = []
+	copy = list(dataset);    
+	while len(trainset) < trainsize:
+#generate indices for the dataset list randomly to pick ele for training data
+		index = random.randrange(len(copy));       
+		trainset.append(copy.pop(index))    
+	return [trainset, copy]
+ 
+def separatebyclass(dataset):
+	separated = {} #dictionary of classes 1 and 0 
+#creates a dictionary of classes 1 and 0 where the values are 
+#the instances belonging to each class
+	for i in range(len(dataset)):
+		vector = dataset[i]
+		if (vector[-1] not in separated):
+			separated[vector[-1]] = []
+		separated[vector[-1]].append(vector)
+	return separated
+ 
+def mean(numbers):
+	return sum(numbers)/float(len(numbers))
+ 
+def stdev(numbers):
+	avg = mean(numbers)
+	variance = sum([pow(x-avg,2) for x in numbers])/float(len(numbers)-1)
+	return math.sqrt(variance)
+ 
+def summarize(dataset): #creates a dictionary of classes
+	summaries = [(mean(attribute), stdev(attribute)) for attribute in zip(*dataset)];
+	del summaries[-1] #excluding labels +ve or -ve
+	return summaries
+ 
+def summarizebyclass(dataset):
+	separated = separatebyclass(dataset); 
+    #print(separated)
+	summaries = {}
+	for classvalue, instances in separated.items(): 
+#for key,value in dic.items()
+#summaries is a dic of tuples(mean,std) for each class value        
+		summaries[classvalue] = summarize(instances) #summarize is used to cal to mean and std
+	return summaries
+ 
+def calculateprobability(x, mean, stdev):
+	exponent = math.exp(-(math.pow(x-mean,2)/(2*math.pow(stdev,2))))
+	return (1 / (math.sqrt(2*math.pi) * stdev)) * exponent
+ 
+def calculateclassprobabilities(summaries, inputvector):
+	probabilities = {} # probabilities contains the all prob of all class of test data
+	for classvalue, classsummaries in summaries.items():#class and attribute information as mean and sd
+		probabilities[classvalue] = 1
+		for i in range(len(classsummaries)):
+			mean, stdev = classsummaries[i] #take mean and sd of every attribute for class 0 and 1 seperaely
+			x = inputvector[i] #testvector's first attribute
+			probabilities[classvalue] *= calculateprobability(x, mean, stdev);#use normal dist
+	return probabilities
+			
+def predict(summaries, inputvector): #training and test data is passed
+	probabilities = calculateclassprobabilities(summaries, inputvector)
+	bestLabel, bestProb = None, -1
+	for classvalue, probability in probabilities.items():#assigns that class which has he highest prob
+		if bestLabel is None or probability > bestProb:
+			bestProb = probability
+			bestLabel = classvalue
+	return bestLabel
+ 
+def getpredictions(summaries, testset):
+	predictions = []
+	for i in range(len(testset)):
+		result = predict(summaries, testset[i])
+		predictions.append(result)
+	return predictions
+ 
+def getaccuracy(testset, predictions):
+	correct = 0
+	for i in range(len(testset)):
+		if testset[i][-1] == predictions[i]:
+			correct += 1
+	return (correct/float(len(testset))) * 100.0
+ 
+def main():
+	filename = 'naivedata.csv'
+	splitratio = 0.67
+	dataset = loadcsv(filename);
+     
+	trainingset, testset = splitdataset(dataset, splitratio)
+	print('Split {0} rows into train={1} and test={2} rows'.format(len(dataset), len(trainingset), len(testset)))
+	# prepare model
+	summaries = summarizebyclass(trainingset);    
+	#print(summaries)
+    # test model
+	predictions = getpredictions(summaries, testset) #find the predictions of test data with the training data
+	accuracy = getaccuracy(testset, predictions)
+	print('Accuracy of the classifier is : {0}%'.format(accuracy))
+ 
+main()
