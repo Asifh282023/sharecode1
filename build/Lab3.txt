@@ -29,3 +29,11 @@ with open("trainingexamples.csv") as f:
             break
     print("\nFinal Specific hypothesis:\n", specific)
     print("\nFinal General hypothesis:\n", gh)
+
+csv file "trainingexamples.csv"
+
+sky,airtemp,humidity,wind,water,forcast,enjoysport
+Sunny,Warm,Normal,Strong,Warm,Same,Yes
+Sunny,Warm,High,Strong,Warm,Same,Yes
+Rainy,Cold,High,Strong,Warm,Change,No
+Sunny,Warm,High,Strong,Cool,Change,Yes
